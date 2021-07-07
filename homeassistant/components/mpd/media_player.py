@@ -109,6 +109,7 @@ class MpdDevice(MediaPlayerEntity):
         self._muted_volume = None
         self._media_position_updated_at = None
         self._media_position = None
+        self._media_duration = None
         self._commands = None
 
         # set up MPD client
@@ -141,16 +142,19 @@ class MpdDevice(MediaPlayerEntity):
         self._currentsong = await self._client.currentsong()
 
         position = self._status.get("elapsed")
-
-        if position is None:
-            position = self._status.get("time")
-
-            if isinstance(position, str) and ":" in position:
+        time = self._status.get("time")
+        media_duration = None
+        
+        if isinstance(position, str) and ":" in position:
+            if position is None:
                 position = position.split(":")[0]
+            media_duration = position.split(":")[1]
 
         if position is not None and self._media_position != position:
             self._media_position_updated_at = dt_util.utcnow()
             self._media_position = int(float(position))
+        if media_duration is not None and self._media_duration != media_duration:
+            self._media_duration = int(float(media_duration))
 
         await self._update_playlists()
 
@@ -225,6 +229,11 @@ class MpdDevice(MediaPlayerEntity):
     def media_position_updated_at(self):
         """Last valid time of media position."""
         return self._media_position_updated_at
+    
+    @property
+    def media_duration(self):
+		"""Duration of current playing media in seconds."""
+		return self._media_duration
 
     @property
     def media_title(self):
